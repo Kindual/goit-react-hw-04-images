@@ -21,7 +21,7 @@ export default function App() {
       setLoadBtn(false)
 
       const { galleryArr, totalHits } = await fetchImg(name, page);
-      setGallery(page === 1 ? [...galleryArr] : [...gallery, ...galleryArr]);
+      setGallery( (gallery) => page === 1 ? [...galleryArr] : [...gallery, ...galleryArr]);
 
       setVisibleLoader(false);
       setLoadBtn(true);
