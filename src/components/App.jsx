@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { useState, useEffect } from 'react'
 import axios from 'axios';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
@@ -6,32 +6,48 @@ import Modal from './Modal/Modal';
 import Button from './Button.jsx/Button';
 import Loader from './Loader/Loader';
 
-export default class App extends Component {
-  state = {
-    gallery: [],
-    name: '',
-    page: 1,
-    loadBtn: false,
-    visibleLoader: false,
-    largeImg: '',
-  };
+export default function App() {
+  const [gallery, setGallery] = useState([]);
+  const [name, setName] = useState('');
+  const [page, setPage] = useState(1);
+  const [loadBtn, setLoadBtn] = useState(false);
+  const [visibleLoader, setVisibleLoader] = useState(false);
+  const [largeImg, setLargeImg] = useState('');
+  const [totalHits, setTotalHits] = useState(0);
 
-  componentDidMount() {
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      setVisibleLoader(true);
+      setLoadBtn(false)
 
+      const { galleryArr, totalHits } = await fetchImg(name, page);
+      setGallery(page === 1 ? [...galleryArr] : [...gallery, ...galleryArr]);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.name !== prevState.name || this.state.page !== prevState.page) {
-      this.fetchImg(this.state.name, this.state.page)
+      setVisibleLoader(false);
+      setLoadBtn(true);
+      setTotalHits(totalHits);
     }
 
+    fetchData()
+      .catch(console.error);
+
+  }, [name, page]);
+
+  const updateName = (name) => {
+    setName(name);
+    setPage(1)
   }
 
-  fetchImg = async (name, page = 1) => {
+  const updatePage = () => {
+    setPage(page + 1)
+  }
+
+  const openModal = (img = '') => {
+    setLargeImg(img)
+  }
+
+  const fetchImg = async (name, page = 1) => {
     try {
-      this.setState(state => ({
-        ...state, loadBtn: false, visibleLoader: true,
-      }))
       const key = '33172087-140883ac21b857d399fef061e';
       const url = `https://pixabay.com/api/?q=${name}&page=${page}&key=${key}&image_type=photo&orientation=horizontal&per_page=12`;
 
@@ -40,50 +56,92 @@ export default class App extends Component {
         id, largeImageURL, webformatURL
       }))
 
-      this.setState((state) =>
-      ({
-        ...state, visibleLoader: false, totalHits: response.data.totalHits,
-        gallery: page === 1 ? galleryArr : [...state.gallery, ...galleryArr], loadBtn: true,
-      }))
+      return { galleryArr, totalHits: response.data.totalHits }
     }
     catch (error) {
       console.dir(error);
     }
   }
 
-  updateName = (name) => {
-    this.setState((state) => ({
-      ...state, name, page: 1,
-    }))
-  }
+  return (
+    <>
+      <Searchbar updateName={updateName}></Searchbar>
 
-  updatePage = () => {
-    this.setState((state) => ({
-      ...state, page: state.page + 1
-    }))
-  }
+      {(page === 1 && visibleLoader) || <ImageGallery gallery={gallery} openModal={openModal}></ImageGallery>}
 
-  openModal = (img = '') => {
-    this.setState((state) => ({
-      ...state, largeImg: img,
-    }))
-  }
+      <Loader visibleLoader={visibleLoader}></Loader>
 
-  render() {
-    const { gallery, page, visibleLoader, totalHits, largeImg, loadBtn } = this.state;
-    return (
-      <>
-        <Searchbar updateName={this.updateName}></Searchbar>
+      {(loadBtn && totalHits !== 0 && page !== Math.ceil(totalHits / 12)) &&
+        < Button onClick={updatePage} ></Button>}
 
-        {(page === 1 && visibleLoader) || <ImageGallery gallery={gallery} openModal={this.openModal}></ImageGallery>}
-
-        <Loader visibleLoader={visibleLoader}></Loader>
-
-        {(loadBtn && totalHits !== 0 && page !== Math.ceil(totalHits / 12)) &&
-          < Button onClick={this.updatePage} ></Button>}
-
-        {(largeImg) && <Modal largeImg={largeImg} openModal={this.openModal} ></Modal>}
-      </>
-    )
-  }
+      {(largeImg) && <Modal largeImg={largeImg} openModal={openModal} ></Modal>}
+    </>
+  )
 }
+
+//   componentDidUpdate(prevProps, prevState) {
+//     if (this.state.name !== prevState.name || this.state.page !== prevState.page) {
+//       this.fetchImg(this.state.name, this.state.page)
+//     }
+//   }
+
+  // fetchImg = async (name, page = 1) => {
+  //   try {
+  //     this.setState(state => ({
+  //       ...state, loadBtn: false, visibleLoader: true,
+  //     }))
+  //     const key = '33172087-140883ac21b857d399fef061e';
+  //     const url = `https://pixabay.com/api/?q=${name}&page=${page}&key=${key}&image_type=photo&orientation=horizontal&per_page=12`;
+
+  //     const response = await axios.get(url);
+  //     const galleryArr = response.data.hits.map(({ id, largeImageURL, webformatURL }) => ({
+  //       id, largeImageURL, webformatURL
+  //     }))
+
+  //     this.setState((state) =>
+  //     ({
+  //       ...state, visibleLoader: false, totalHits: response.data.totalHits,
+  //       gallery: page === 1 ? galleryArr : [...state.gallery, ...galleryArr], loadBtn: true,
+  //     }))
+  //   }
+  //   catch (error) {
+  //     console.dir(error);
+  //   }
+  // }
+
+//   updateName = (name) => {
+//     this.setState((state) => ({
+//       ...state, name, page: 1,
+//     }))
+//   }
+
+//   updatePage = () => {
+//     this.setState((state) => ({
+//       ...state, page: state.page + 1
+//     }))
+//   }
+
+//   openModal = (img = '') => {
+//     this.setState((state) => ({
+//       ...state, largeImg: img,
+//     }))
+//   }
+
+//   render() {
+//     const { gallery, page, visibleLoader, totalHits, largeImg, loadBtn } = this.state;
+//     return (
+      // <>
+      //   <Searchbar updateName={this.updateName}></Searchbar>
+
+      //   {(page === 1 && visibleLoader) || <ImageGallery gallery={gallery} openModal={this.openModal}></ImageGallery>}
+
+      //   <Loader visibleLoader={visibleLoader}></Loader>
+
+      //   {(loadBtn && totalHits !== 0 && page !== Math.ceil(totalHits / 12)) &&
+      //     < Button onClick={this.updatePage} ></Button>}
+
+      //   {(largeImg) && <Modal largeImg={largeImg} openModal={this.openModal} ></Modal>}
+      // </>
+//     )
+//   }
+// }
